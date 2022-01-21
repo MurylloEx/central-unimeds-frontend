@@ -4,6 +4,6 @@ export interface AboutPageProps { }
 
 export const AboutPage: FunctionComponent<AboutPageProps> = () => {
   return (
-    <Fragment />
+    <p>sobre</p>
   );
 }

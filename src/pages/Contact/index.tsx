@@ -4,6 +4,6 @@ export interface ContactPageProps { }
 
 export const ContactPage: FunctionComponent<ContactPageProps> = () => {
   return (
-    <Fragment />
+    <p>contato</p>
   );
 }
