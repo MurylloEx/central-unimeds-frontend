@@ -1,4 +1,4 @@
-import { FunctionComponent } from 'react';
+import React, { FunctionComponent } from 'react';
 import { Container, Row, Title, Text, Globe, Phone, Location, Separator, MetadataBlock } from './styles';
 import { capitalize } from '../../services';
 

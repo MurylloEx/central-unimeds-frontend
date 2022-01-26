@@ -84,8 +84,8 @@ export const Separator = styled.p`
     &::after {
       align-content: center;
       font-size: 16px;
-      content: "|";
       color: #838080;
+      content: "|";
     }
   }
   @media only screen and (max-width: 1024px) {

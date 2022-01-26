@@ -1,40 +1,73 @@
-import { useMutation, useQuery } from "react-query";
-import { AxiosResponse, AxiosResponseHeaders } from "axios";
 import { del, get, post, put, Request } from "../services";
+import { useEffect, useRef, useState } from "react";
 
-export interface HttpFetchResult<T> {
-  status: number;
-  headers: AxiosResponseHeaders;
-  response: T;
+export type WebClientMethods = "GET" | "POST" | "PUT" | "DELETE";
+
+export type WebClientCacheEntry<T> = {
+  key: string;
+  method: WebClientMethods;
   success: boolean;
+  response: WebClientResponse<T>;
 }
 
-async function liftResponse<T>(promise: Promise<[boolean, AxiosResponse<T, any>]>): Promise<HttpFetchResult<T>> {
-  let [success, {data, ...response}] = await promise;
-  return { ...response, success, response: data };
+export type WebClientResponse<T> = {
+  data: T;
+  status: number;
 }
 
-export function useHttpGet<T = any>({ url, params, headers }: Request, ttlCache: number = 86400){
-  return useQuery(url, {
-    cacheTime: ttlCache,
-    queryFn: () => liftResponse(get<T>({ url, params, headers }))
-  });
+export type WebClientCallback<T> = (success: boolean, response: WebClientResponse<T>) => void;
+
+function isRequestCached<T>(request: Request, method: WebClientMethods, cache: WebClientCacheEntry<T>[]): false | WebClientCacheEntry<T> 
+{
+  let [cacheEntry] = cache.filter(v => v.key == request.url && v.method == method);
+  return cacheEntry !== undefined ? cacheEntry : false;
 }
 
-export function useHttpPost<T = any>({ url, params, headers }: Request){
-  return useMutation(({ data: body }: any) => {
-    return liftResponse(post<T>({ url, params, headers, body }));
-  });
-}
+export function useRequest<T>(event: WebClientCallback<T>, cacheable: boolean)
+{
+  const [response, setResponse] = useState<WebClientResponse<T> | undefined>();
+  const [success, setSuccess] = useState<boolean | undefined>(undefined);
 
-export function useHttpPut<T = any>({ url, params, headers }: Request){
-  return useMutation(({ data: body }: any) => {
-    return liftResponse(put<T>({ url, params, headers, body }));
-  });
-}
+  const cache = useRef<WebClientCacheEntry<T>[]>([]);
 
-export function useHttpDelete<T = any>({ url, params, headers }: Request){
-  return useMutation(() => {
-    return liftResponse(del<T>({ url, params, headers }));
-  });
+  async function doRequest(method: WebClientMethods, options: Request)
+  {
+    let request = options;
+    let cached = isRequestCached(request, method, cache.current);
+
+    if (!cached){
+      setResponse(undefined);
+
+      const caller = {
+        "GET": get,
+        "POST": post,
+        "PUT": put,
+        "DELETE": del
+      }[method];
+
+      const [isSuccess, res] = await caller<T>(request);
+
+      setSuccess(isSuccess);
+      setResponse({ data: res?.data, status: res?.status });
+
+      if (cacheable && !isRequestCached(request, method, cache.current)){
+        cache.current.push({
+          key: request.url,
+          method: method,
+          success: isSuccess,
+          response: { data: res?.data, status: res?.status }
+        });
+      }
+      return;
+    }
+
+    setResponse(cached.response);
+  }
+
+  useEffect(() => {
+    if (!!response && (typeof success != "undefined"))
+      event(success, response);
+  }, [response, success]);
+
+  return { response, success: !!success, request: doRequest };
 }

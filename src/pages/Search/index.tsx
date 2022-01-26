@@ -1,8 +1,11 @@
-import { ChangeEvent, Fragment, FunctionComponent, useEffect, useState } from "react";
-import { Input, Render, Result } from "../../core/components";
+import { ChangeEvent, FunctionComponent, useEffect, useState } from "react";
+import InfiniteScroll from "react-infinite-scroll-component";
+
+import { useRequest } from "../../core/hooks";
 import { UnimedResponseType } from "../../core/typescript";
-import { useHttpGet } from "../../core/hooks";
-import { Container } from "./styles";
+import { Input, Render, Result } from "../../core/components";
+
+import { Container, Paragraph } from "./styles";
 
 export interface SearchProps { }
 
@@ -10,35 +13,80 @@ export const SearchPage: FunctionComponent<SearchProps> = () => {
   
   const [filterPattern, setFilterPattern] = useState('');
   const [results, setResults] = useState<UnimedResponseType[]>([]);
-  const { isSuccess, isError, data } = useHttpGet<UnimedResponseType[]>({ url: '/unimeds' }, 3600);
+  const {response, success, request: doGetUnimeds} = useRequest<UnimedResponseType[]>(onApiResponse, true);
 
   useEffect(() => {
-    if (isSuccess && !isError && !!data)
-      setResults(data.response ?? []);
-  }, [isSuccess, isError, data]);
+    doGetUnimeds('GET', { url: '/unimeds' });
+  }, []);
+
+  function onApiResponse(){
+    if (success && !!response){
+      setResults(response.data.slice(0, 20) ?? []);
+    }
+  }
 
   function onChange(e: ChangeEvent<HTMLInputElement>){
+    setFilterPattern(e.target.value);
     let pattern = e.target.value.toLowerCase();
-    setFilterPattern(pattern);
-    setResults(data?.response.filter(unimed => {
+    let filteredResults = response?.data.filter(unimed => {
       return unimed.nmUnimed.toLowerCase().includes(pattern);
-    }) ?? []);
+    }) ?? [];
+    setResults(filteredResults.slice(0, 20));
+  }
+
+  function onFetchMoreData(){
+    setTimeout(() => {
+      let total = response?.data ?? [];
+      let chunk = total.slice(
+        results.length, 
+        results.length + 20 % total.length);
+
+      setResults(results.concat(chunk));
+    }, 1500);
   }
 
   return (
     <Container>
+
       <Input value={filterPattern} onChange={onChange} />
-      <Render if={isSuccess}>
-        {results.map((unimed) => (
-          <Result 
-            name={unimed.nmUnimed}
-            phone={unimed.telefone}
-            address={unimed.endereco + " " + unimed.cidade}
-            siteUrl={unimed.site} 
-            uf={unimed.uf}
-          />
-        ))}
+
+      <Render if={success}>
+        <Render if={results.length > 0}>
+          <InfiniteScroll
+            dataLength={results.length}
+            next={onFetchMoreData}
+            hasMore={true}
+            loader={
+              <Paragraph>
+                Carregando...
+              </Paragraph>
+            }
+            endMessage={
+              <Paragraph>
+                Você visualizou todos os resultados
+              </Paragraph>
+            }
+          >
+            {results.map((unimed, key) => (
+              <Result 
+                key={key}
+                name={unimed.nmUnimed}
+                phone={unimed.telefone}
+                address={unimed.endereco + " " + unimed.cidade}
+                siteUrl={unimed.site} 
+                uf={unimed.uf}
+              />
+            ))}
+          </InfiniteScroll>
+        </Render>
+
+        <Render if={results.length === 0}>
+          <Paragraph>
+            Não há resultados correspondentes à busca.
+          </Paragraph>
+        </Render>
       </Render>
+    
     </Container>
   );
   

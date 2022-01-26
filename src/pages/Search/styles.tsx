@@ -16,3 +16,14 @@ export const Container = styled.div`
     margin-right: 16px;
   }
 `;
+
+export const Paragraph = styled.p`
+  font-weight: bold;
+  font-size: 18px;
+  text-align: center;
+  padding-top: 16px;
+  padding-bottom: 32px;
+  font-family: Poppins, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; 
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+`;
