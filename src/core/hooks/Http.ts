@@ -19,7 +19,7 @@ export type WebClientCallback<T> = (success: boolean, response: WebClientRespons
 
 function isRequestCached<T>(request: Request, method: WebClientMethods, cache: WebClientCacheEntry<T>[]): false | WebClientCacheEntry<T> 
 {
-  let [cacheEntry] = cache.filter(v => v.key == request.url && v.method == method);
+  let [cacheEntry] = cache.filter(v => v.key === request.url && v.method === method);
   return cacheEntry !== undefined ? cacheEntry : false;
 }
 
